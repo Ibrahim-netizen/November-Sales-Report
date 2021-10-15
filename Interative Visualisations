@@ -1,0 +1,122 @@
+---
+title: "Online Retailer's November Sales Report"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(DT)
+library(stringr)
+library(lubridate)
+library(data.table)
+library(plotly)
+library(dygraphs)
+library(dplyr)
+library(highcharter)
+```
+
+```{r}
+
+Data3<-read.csv("Cleaned Data.csv")
+Agg_Data<-read.csv("Aggregated table.csv")
+Data_T<-read.csv("Data_T.csv")
+Data_C<-read.csv("Data_C.csv")
+Data_O<-read.csv("Data_O.csv")
+
+```
+
+# Main Dashboard
+
+Column {data-width=500, .tabset}
+-----------------------------------------------------------------------
+
+### Percentage Quantities in Top Countries
+
+```{r}
+df<-Data_C
+df<-df %>% group_by(Agg_Country)
+d1<-df %>% plot_ly(labels = ~Agg_Country, values = ~Quantity)
+
+d1<-d1 %>% add_pie(hole = 0.6)
+d1<-d1 %>% layout(title = "Donut Chart of Percentage Quantities Per Country", showlegent = T,
+                  xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE), 
+                  yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+d1
+
+
+```
+
+
+### Percentage Quantities in Other Countries
+
+```{r}
+
+Other_Country<-subset(Data3, subset = Agg_Country == 'Others')
+
+Data_O<-setkey(setDT(Other_Country), Country)[, list(Quantity=sum(Quantity)), by=list(Country)]
+
+pie<-plot_ly(data=Data_O, labels = ~Country, values = ~Quantity, type = 'pie')
+
+pie<- pie %>% layout(title = 'Total Purchased Quantities in Other Countries', 
+                     xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE), 
+                     yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+pie
+
+```
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Total Revenue Vs Total Quantity per UnitPrice
+
+```{r}
+
+hc <- hchart(
+  density(Agg_Data$Total_Quantity), type = "area", 
+  color = "steelblue", name = "Total Quantity"
+) %>%
+  hc_add_series(
+    density(Agg_Data$Total_UnitPrice), type = "area",
+    color = "#B71C1C", 
+    name = "Total unitPrice"
+  ) %>%
+  hc_add_series(
+    density(Agg_Data$Total_Revenue), type = "area",
+    color = "green", 
+    name = "Total Revenue"
+  )
+
+hc 
+
+```
+
+### Total Revenue per Location
+
+```{r}
+
+fig <- plot_ly(Data_T, x = ~Country, y = ~Total_Revenue, type = 'scatter', mode = 'lines')
+fig <- fig %>% layout(xaxis = list(title = 'Countries'),
+                      yaxis = list (title = 'Total Revenue'))
+fig
+
+
+```
+
+# Integrated Data
+
+
+### Transaction Data
+
+```{r}
+
+datatable(
+  Data3[,-1], extensions = 'Buttons', options = list(
+    dom = 'Bfrtip', buttons = c('copy', 'print', 'csv')
+	)
+)
+
+```
